@@ -89,7 +89,7 @@ function angle_bisector(dir1, dir2)
 end
 
 function create_line_segment(model, start, stop)
-  local shape = { type="curve", closed=false; { type="segment"; start, stop } }
+  local shape = { type="curve", closed=false; { type="segment"; stop, start } }
   return ipe.Path(model.attributes, { shape } )
 end
 
