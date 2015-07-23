@@ -1,11 +1,14 @@
-----------------------------------------------------------------------
+------------------------------------------------------------------------
 -- ipelet: bisector.lua
-----------------------------------------------------------------------
+------------------------------------------------------------------------
 --
 -- This ipelet lets one create a bisector between two line segments.
+-- If the two supporting lines do not intersect you get a line segment
+-- centered between them.
 --
 -- File used as a kind of template to create this: 
--- (http://www.filewatcher.com/p/ipe_7.1.1-1_i386.deb.1106034/usr/lib/ipe/7.1.1/ipelets/euclid.lua.html)
+-- (http://www.filewatcher.com/p/ipe_7.1.1-1_i386.deb.1106034/usr/lib
+-- /ipe/7.1.1/ipelets/euclid.lua.html)
 --
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -20,6 +23,7 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 --
+-- geder@cosy.sbg.ac.at -----------------------------------------------
 
 label = "Bisector"
 
@@ -107,6 +111,16 @@ function bisector(model, a, b, c, d)
   if intersect then
      local bis = angle_bisector(b-a, d-c) 
      local start, stop = calculate_start_stop(a,b,c,d,intersect,bis)
+      
+     return create_line_segment(model, start, stop )
+  else
+     local l1_normal = l1:normal()
+     local dist = l1:distance(c)/2.0
+     local center = a + (l1_normal:normalized()*dist)
+     if l2:distance(center) > dist*2.0 then
+         center = a - (l1_normal:normalized()*dist)
+     end
+     local start, stop = calculate_start_stop(a,b,c,d,center,l1:dir())
       
      return create_line_segment(model, start, stop )
   end
