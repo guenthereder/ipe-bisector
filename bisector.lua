@@ -32,7 +32,7 @@ about = [[
 ]]
 
 function incorrect(model)
-  model:warning("Primary selection are not TWO lines")
+  model:warning("Selection are not TWO lines!")
 end
 
 function collect_vertices(model)
@@ -97,6 +97,11 @@ function calculate_start_stop(a,b,c,d,intersect,bis)
    local bi_line = ipe.LineThrough(intersect, intersect + bis)
 --   local angle = bi_line:dir():angle()
    local start  = bi_line:project(a)
+
+   -- start at a common endpoint in case one exists
+   if a == c then start = a; 
+   elseif b == d then start = b; bis = bis * -1
+   end
 
    local length = math.abs( math.sqrt( (a-b) .. (a-b) ) + math.sqrt( (c-d) .. (c-d) ) ) / 2.0
 
