@@ -35,11 +35,13 @@ function incorrect(model)
   model:warning("Selection are not TWO lines!")
 end
 
-function collect_vertices(model)
+function collect_segments(model)
    local p = model:page()
 
    local items = {}
    local item_cnt = 0
+   
+   segments = {}
 
    for i, obj, sel, layer in p:objects() do
 	   if sel then
@@ -48,9 +50,29 @@ function collect_vertices(model)
 	   end	    
    end
 
+   if item_cnt == 0 then incorrect(model) return end
+  
+   local obj_a = items[0]
+   if item_cnt == 1 and obj_a:type() == "path" then
+      local my_path = obj_a:shape()
+      if(#my_path > 0) then
+         local sub_path = my_path[1]
+         if(#sub_path > 1) then
+            local seg_idx = 0
+            for idx=1,#sub_path do
+               local seg = sub_path[idx]
+               if(seg.type == "segment") then
+                  segments[seg_idx] = sub_path[idx]
+                  seg_idx = seg_idx + 1
+               end
+            end
+            return segments, obj_a:matrix()
+         end
+      end
+   end
+
   if item_cnt > 2 or item_cnt < 2 then incorrect(model) return end
 
-  local obj_a = items[0]
   local obj_b = items[1]
 
   if (obj_a:type() ~= "path" or obj_b:type() ~= "path") then incorrect(model) return end
@@ -71,13 +93,12 @@ function collect_vertices(model)
     return
   end
 
-  local m_a = obj_a:matrix()
-  local m_b = obj_b:matrix()
-  local a = m_a * shape_a[1][1][1]
-  local b = m_a * shape_a[1][1][2]
-  local d = m_b * shape_b[1][1][1]
-  local c = m_b * shape_b[1][1][2]
-  return a, b, c, d
+  segments[0] = shape_a[1][1]
+  segments[1] = shape_b[1][1]
+
+  return segments, obj_a:matrix()
+
+
 end
 
 function angle_bisector(dir1, dir2)
@@ -89,23 +110,43 @@ function angle_bisector(dir1, dir2)
 end
 
 function create_line_segment(model, start, stop)
-  local shape = { type="curve", closed=false; { type="segment"; stop, start } }
+  local shape = { type="curve", closed=false; { type="segment"; start, stop } }
   return ipe.Path(model.attributes, { shape } )
 end
 
 function calculate_start_stop(a,b,c,d,intersect,bis)
    local bi_line = ipe.LineThrough(intersect, intersect + bis)
---   local angle = bi_line:dir():angle()
-   local start  = bi_line:project(a)
+   local start   = bi_line:project(a)
+   local length  = math.abs( math.sqrt( (a-b) .. (a-b) ) + math.sqrt( (c-d) .. (c-d) ) ) / 2.0
+
+   local dx = (b-a)
+   local dy = (d-c)
+
+   local angle = (math.asin(  (dx.x*dy.y - dx.y*dy.x) / (math.sqrt(dx.x*dx.x + dx.y*dx.y) * math.sqrt(dy.x*dy.x + dy.y*dy.y ) ) ) ) *180 / math.pi
+   local stop;
 
    -- start at a common endpoint in case one exists
-   if a == c then start = a; 
-   elseif b == d then start = b; bis = bis * -1
+   if a == c then 
+      start = a; 
+      if angle > math.pi then 
+         stop = start + (bis:normalized() * length)
+      elseif angle <= math.pi then
+         stop = start - (bis:normalized() * length)
+      end
+      return start, stop;
+   elseif b == d then 
+      start = b
+      if angle > math.pi then 
+         stop = start + (bis:normalized() * length)
+      elseif angle <= math.pi then
+         stop = start - (bis:normalized() * length)
+      end
+      return start, stop;
    end
 
-   local length = math.abs( math.sqrt( (a-b) .. (a-b) ) + math.sqrt( (c-d) .. (c-d) ) ) / 2.0
+   stop   = start + (bis:normalized() * length)
 
-   return start, (start + (bis:normalized() * length))
+   return start, stop
 end
 
 function bisector(model, a, b, c, d)
@@ -133,13 +174,29 @@ end
 
 
 function create_bisector(model)
-  local a, b, c, d = collect_vertices(model)
-  if not a then return end
+  local segments, matrix = collect_segments(model)
+  if not segments then return end
 
-  local obj = bisector(model, a, b, c, d)
-  if obj then
-    model:creation("create bisector of lines", obj)
+  local idx = 0
+  while idx < #segments do
+     local seg1 = segments[idx]
+     local seg2 = segments[idx+1]
+
+     local a = matrix * seg1[1]
+     local b = matrix * seg1[2]
+     local d = matrix * seg2[1]
+     local c = matrix * seg2[2]
+
+     local obj = bisector(model, a, b, c, d)
+     if obj then
+       model:creation("create bisector of lines", obj)
+     end
+
+     idx = idx+1
   end
+
+local a,b,c,d
+
 end
 
 methods = {
