@@ -184,8 +184,15 @@ function start_bisector(model,createall)
   segments, matrix = collect_segments(model)
   if not segments then return end
 
-  if createall then
+  if createall and #segments > 2 then
+     for idx_a=0,#segments-1 do
+         for idx_b=idx_a+1,#segments do
+            local seg1 = segments[idx_a]
+            local seg2 = segments[idx_b]
 
+            create_bisector_obj(model,seg1,seg2,matrix)    
+         end
+     end
   else
      local idx = 0
      while idx < #segments do
