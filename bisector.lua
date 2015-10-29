@@ -32,7 +32,7 @@ about = [[
 ]]
 
 function incorrect(model)
-  model:warning("Selection are not TWO lines!")
+  model:warning("Selection are not TWO lines or a polyline!")
 end
 
 function collect_segments(model)
@@ -126,21 +126,17 @@ function calculate_start_stop(a,b,c,d,intersect,bis)
    local stop;
 
    -- start at a common endpoint in case one exists
-   if a == c then 
-      start = a; 
+   if a == c or b ==d then 
+      if a == c     then start = a 
+      elseif b == d then start = b
+      end
+
       if angle > math.pi then 
          stop = start + (bis:normalized() * length)
       elseif angle <= math.pi then
          stop = start - (bis:normalized() * length)
       end
-      return start, stop;
-   elseif b == d then 
-      start = b
-      if angle > math.pi then 
-         stop = start + (bis:normalized() * length)
-      elseif angle <= math.pi then
-         stop = start - (bis:normalized() * length)
-      end
+      
       return start, stop;
    end
 
@@ -172,35 +168,62 @@ function bisector(model, a, b, c, d)
   end
 end
 
+function create_bisector_obj(model,seg1,seg2,matrix)
+   local a = matrix * seg1[1]
+   local b = matrix * seg1[2]
+   local d = matrix * seg2[1]
+   local c = matrix * seg2[2]
+   
+   local obj = bisector(model, a, b, c, d)
+   if obj then
+      model:creation("create bisector of lines", obj)
+   end
+end
 
-function create_bisector(model)
-  local segments, matrix = collect_segments(model)
+function start_bisector(model,createall)
+  segments, matrix = collect_segments(model)
   if not segments then return end
 
-  local idx = 0
-  while idx < #segments do
-     local seg1 = segments[idx]
-     local seg2 = segments[idx+1]
+  if createall then
 
-     local a = matrix * seg1[1]
-     local b = matrix * seg1[2]
-     local d = matrix * seg2[1]
-     local c = matrix * seg2[2]
+  else
+     local idx = 0
+     while idx < #segments do
+        local seg1 = segments[idx]
+        local seg2 = segments[idx+1]
 
-     local obj = bisector(model, a, b, c, d)
-     if obj then
-       model:creation("create bisector of lines", obj)
-     end
+        create_bisector_obj(model,seg1,seg2,matrix)
 
-     idx = idx+1
+        idx = idx+1
+      end
+      if #segments > 1 then
+        local seg1 = segments[idx]
+        local seg2 = segments[0]
+
+        local a = matrix * seg1[1]
+        local b = matrix * seg1[2]
+        local d = matrix * seg2[1]
+        local c = matrix * seg2[2]
+
+        if a == c or b ==d then
+            create_bisector_obj(model,seg1,seg2,matrix)
+        end
+      end
   end
-
-local a,b,c,d
 
 end
 
+function create_all_bisector(model)
+   start_bisector(model,true)
+end
+
+function create_bisector(model)
+   start_bisector(model,false)
+end
+
 methods = {
-  { label="Bisector of two lines", run = create_bisector },
+  { label="Bisector (two edges|polyline)", run = create_bisector },
+  { label="All Bisectors of polyline", run = create_all_bisector },
   --{ label="Bisector of two lines", run = create_incircle },
   --{ label="(nothing yet)", run = create_excircles },
 }
