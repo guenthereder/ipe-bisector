@@ -66,7 +66,7 @@ function collect_segments(model)
                   seg_idx = seg_idx + 1
                end
             end
-            return segments, obj_a:matrix()
+            return segments, obj_a:matrix(), obj_a:matrix()
          end
       end
    end
@@ -96,7 +96,7 @@ function collect_segments(model)
   segments[0] = shape_a[1][1]
   segments[1] = shape_b[1][1]
 
-  return segments, obj_a:matrix()
+  return segments, obj_a:matrix(), obj_b:matrix()
 
 
 end
@@ -168,11 +168,11 @@ function bisector(model, a, b, c, d)
   end
 end
 
-function create_bisector_obj(model,seg1,seg2,matrix)
-   local a = matrix * seg1[1]
-   local b = matrix * seg1[2]
-   local d = matrix * seg2[1]
-   local c = matrix * seg2[2]
+function create_bisector_obj(model,seg1,seg2,matrix1,matrix2)
+   local a = matrix1 * seg1[1]
+   local b = matrix1 * seg1[2]
+   local d = matrix2 * seg2[1]
+   local c = matrix2 * seg2[2]
    
    local obj = bisector(model, a, b, c, d)
    if obj then
@@ -181,7 +181,7 @@ function create_bisector_obj(model,seg1,seg2,matrix)
 end
 
 function start_bisector(model,createall)
-  segments, matrix = collect_segments(model)
+  segments, matrix, matrix2 = collect_segments(model)
   if not segments then return end
 
   if createall and #segments >= 2 then
@@ -190,7 +190,7 @@ function start_bisector(model,createall)
             local seg1 = segments[idx_a]
             local seg2 = segments[idx_b]
 
-            create_bisector_obj(model,seg1,seg2,matrix)    
+            create_bisector_obj(model,seg1,seg2,matrix,matrix2)
          end
      end
   else
@@ -199,7 +199,7 @@ function start_bisector(model,createall)
         local seg1 = segments[idx]
         local seg2 = segments[idx+1]
 
-        create_bisector_obj(model,seg1,seg2,matrix)
+        create_bisector_obj(model,seg1,seg2,matrix,matrix2)
 
         idx = idx+1
       end
@@ -213,7 +213,7 @@ function start_bisector(model,createall)
         local c = matrix * seg2[2]
 
         if a == c or b ==d then
-            create_bisector_obj(model,seg1,seg2,matrix)
+            create_bisector_obj(model,seg1,seg2,matrix,matrix2)
         end
       end
   end
