@@ -2,9 +2,11 @@
 -- ipelet: bisector.lua
 ------------------------------------------------------------------------
 --
--- This ipelet lets one create a bisector between two line segments.
--- If the two supporting lines do not intersect you get a line segment
--- centered between them.
+-- This ipelet lets one create a (weighted) bisector between two line 
+-- segments. If the two supporting lines do not intersect you get a line 
+-- segment (weighted) centered between them.
+--
+-- Weights are defined by the line pen-width.
 --
 -- File used as a kind of template to create this: 
 -- (http://www.filewatcher.com/p/ipe_7.1.1-1_i386.deb.1106034/usr/lib
@@ -23,16 +25,35 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 --
--- geder@cosy.sbg.ac.at -----------------------------------------------
+-- geder@cs.sbg.ac.at -------------------------------------------------
 
 label = "Bisector"
 
 about = [[
-   Create bisector between lines.
+   Create (weighted) bisector between lines.
 ]]
 
 function incorrect(model)
   model:warning("Selection are not TWO lines or a polyline!")
+end
+
+function getPenSize(S)
+   local size = S:get('pen')
+   
+   if size == "normal" then
+      size = 0.4
+   elseif size == "heavier" then
+      size = 0.8
+   elseif size == "fat" then
+      size = 1.2
+   elseif size == "ultrafat" then
+      size = 2.0
+   elseif math.type(size) == "nil" then 
+      print("Warning: Unknown pensize: " + size)
+      size = 0.4
+   end
+ 
+   return size
 end
 
 function collect_segments(model)
@@ -42,6 +63,7 @@ function collect_segments(model)
    local item_cnt = 0
    
    segments = {}
+   weights  = {}
 
    for i, obj, sel, layer in p:objects() do
 	   if sel then
@@ -63,10 +85,11 @@ function collect_segments(model)
                local seg = sub_path[idx]
                if(seg.type == "segment") then
                   segments[seg_idx] = sub_path[idx]
+                  weights[seg_idx] = getPenSize(obj_a)
                   seg_idx = seg_idx + 1
                end
             end
-            return segments, obj_a:matrix(), obj_a:matrix()
+            return segments, weights, obj_a:matrix(), obj_a:matrix()
          end
       end
    end
@@ -96,15 +119,16 @@ function collect_segments(model)
   segments[0] = shape_a[1][1]
   segments[1] = shape_b[1][1]
 
-  return segments, obj_a:matrix(), obj_b:matrix()
+  weights[0] = getPenSize(obj_a)
+  weights[1] = getPenSize(obj_b)
 
-
+  return segments, weights, obj_a:matrix(), obj_b:matrix()
 end
 
-function angle_bisector(dir1, dir2)
+function angle_bisector(dir1, dir2, w1, w2)
   assert(dir1:sqLen() > 0)
   assert(dir2:sqLen() > 0)
-  local bisector = dir1:normalized() + dir2:normalized()
+  local bisector = ( dir1:normalized() * (1/w1) ) + ( dir2:normalized() * (1/w2) )
   if bisector:sqLen() == 0 then bisector = dir1:orthogonal(); print("ortho...") end
   return bisector 
 end
@@ -145,21 +169,21 @@ function calculate_start_stop(a,b,c,d,intersect,bis)
    return start, stop
 end
 
-function bisector(model, a, b, c, d)
+function bisector(model, a, b, c, d, w1, w2)
   local l1 = ipe.LineThrough(a,b)
   local l2 = ipe.LineThrough(c,d)
   local intersect = l1:intersects(l2)
   
   if intersect then
-     local bis = angle_bisector(b-a, d-c) 
+     local bis = angle_bisector(b-a, d-c, w1, w2) 
      local start, stop = calculate_start_stop(a,b,c,d,intersect,bis)
       
      return create_line_segment(model, start, stop )
   else
      local l1_normal = l1:normal()
-     local dist = l1:distance(c)/2.0
+     local dist = l1:distance(c)/2.0 * (w1/w2)
      local center = a + (l1_normal:normalized()*dist)
-     if l2:distance(center) > dist*2.0 then
+     if l2:distance(center) > dist*2.0 * (w1/w2) then
          center = a - (l1_normal:normalized()*dist)
      end
      local start, stop = calculate_start_stop(a,b,c,d,center,l1:dir())
@@ -168,29 +192,31 @@ function bisector(model, a, b, c, d)
   end
 end
 
-function create_bisector_obj(model,seg1,seg2,matrix1,matrix2)
+function create_bisector_obj(model,seg1,seg2,w1,w2,matrix1,matrix2)
    local a = matrix1 * seg1[1]
    local b = matrix1 * seg1[2]
    local d = matrix2 * seg2[1]
    local c = matrix2 * seg2[2]
    
-   local obj = bisector(model, a, b, c, d)
+   local obj = bisector(model, a, b, c, d, w1, w2)
    if obj then
       model:creation("create bisector of lines", obj)
    end
 end
 
 function start_bisector(model,createall)
-  segments, matrix, matrix2 = collect_segments(model)
+  segments, weights, matrix, matrix2 = collect_segments(model)
   if not segments then return end
 
-  if createall and #segments >= 2 then
+  if createall then
      for idx_a=0,#segments-1 do
          for idx_b=idx_a+1,#segments do
             local seg1 = segments[idx_a]
             local seg2 = segments[idx_b]
+            local w1   = weights[idx_a]
+            local w2   = weights[idx_b]
 
-            create_bisector_obj(model,seg1,seg2,matrix,matrix2)
+            create_bisector_obj(model,seg1,seg2,w1,w2,matrix,matrix2)
          end
      end
   else
@@ -198,14 +224,18 @@ function start_bisector(model,createall)
      while idx < #segments do
         local seg1 = segments[idx]
         local seg2 = segments[idx+1]
+        local w1   = weights[idx]
+        local w2   = weights[idx+1]
 
-        create_bisector_obj(model,seg1,seg2,matrix,matrix2)
+        create_bisector_obj(model,seg1,seg2,w1,w2,matrix,matrix2)
 
         idx = idx+1
       end
-      if #segments > 1 then
+      if #segments-1 > 1 then
         local seg1 = segments[idx]
         local seg2 = segments[0]
+        local w1   = weights[idx]
+        local w2   = weights[0]
 
         local a = matrix * seg1[1]
         local b = matrix * seg1[2]
@@ -213,7 +243,7 @@ function start_bisector(model,createall)
         local c = matrix * seg2[2]
 
         if a == c or b ==d then
-            create_bisector_obj(model,seg1,seg2,matrix,matrix2)
+            create_bisector_obj(model,seg1,seg2,w1,w2,matrix,matrix2)
         end
       end
   end
@@ -231,6 +261,4 @@ end
 methods = {
   { label="Bisector (two edges|polyline)", run = create_bisector },
   { label="All Bisectors of polyline", run = create_all_bisector },
-  --{ label="Bisector of two lines", run = create_incircle },
-  --{ label="(nothing yet)", run = create_excircles },
 }
