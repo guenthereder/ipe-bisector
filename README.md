@@ -1,10 +1,11 @@
 # ipe-bisector
+
 An ipelet programmed in lua that lets you create a weighted bisector between two line
 segments, or between every line segment of a given polychain.
 
 ## Install
 
-- Download the .lua file and place it in your $HOME/.ipe/ipelets directory.
+- Download the `.lua`-file and place it in your `$HOME/.ipe/ipelets` directory.
 
 - Open `ipe`, look in `ipelets` -> `Bisector`
 
