@@ -177,16 +177,29 @@ function bisector(model, a, b, c, d, w1, w2)
   if intersect then
      local bis = angle_bisector(b-a, d-c, w1, w2) 
      local start, stop = calculate_start_stop(a,b,c,d,intersect,bis)
-      
+
      return create_line_segment(model, start, stop )
   else
+
      local l1_normal = l1:normal()
      local dist = l1:distance(c)/2.0 * (w1/w2)
      local center = a + (l1_normal:normalized()*dist)
+     
      if l2:distance(center) > dist*2.0 * (w1/w2) then
-         center = a - (l1_normal:normalized()*dist)
+        center = a - (l1_normal:normalized()*dist)
      end
+
      local start, stop = calculate_start_stop(a,b,c,d,center,l1:dir())
+     
+     local l12 = l1
+     local l13 = ipe.LineThrough(a,c)
+     local l14 = ipe.LineThrough(a,d)
+     if l12:dir() == l13:dir() and l13:dir() == l14:dir() then
+         -- strange way of testing, but in this case the lines are colinear
+         center = a + ((d-a)*0.5)
+         start, stop =  calculate_start_stop(a,b,c,d,center,l1:normal())
+     end
+
       
      return create_line_segment(model, start, stop )
   end
