@@ -104,17 +104,27 @@ function reverseBisector(s1, sigS1, arc)
    
    p1, p2 = orderIntersectionPoints(circ:intersect(l),s1)
 
-   print(p1,p2,m,s1,sigS1)
-
    d1, d2 = dist(s1,p1), dist(s1,p2)
    t1, t2 = d1/sigS1, d2/sigS1
 
-   sigS2xd =  (1/(t2-t1)) * (p1-p2)
+   dA = dist(m,s1)
+   dB = dist(m,p1)
 
-   s2 = p1 + sigS2xd * t1
-   sigS2 = sigS2xd:len()
+   -- distinguish s1 inside or outside of circle
+   if dA < dB then
+      -- s1 inside circle
+      sigS2xd =  (1/(t2-t1)) * (p1-p2)
+      s2 = p1 + sigS2xd * t1
+      sigS2 = sigS2xd:len()
 
-   return s2, sigS2
+      return s2, sigS2
+   else
+      -- s1 outside of circle
+      sigS2xd =  (1/(t2+t1)) * (p1-p2)
+      s2 = p2 + sigS2xd * t2
+      sigS2 = sigS2xd:len()
+      return s2, sigS2
+   end
 end
 
 function drawMarkOfSize(model,s,size,mark)
