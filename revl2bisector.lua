@@ -43,7 +43,7 @@ function getWeight(S)
       size = 5.0
    elseif math.type(size) == "nil" then 
       print("Warning: Unknown size: " + size)
-      size = 2.0
+      size = 1.0
    end
    return size
 end
@@ -94,14 +94,17 @@ function orderIntersectionPoints(vect,s1)
    end
 end
 
-function reverseBisector(s1, sigS1, arc)
-   local mat = arc.arc:matrix()
-   
+function reverseBisector(s1, sigS1, arc, arcObjMatrix)
+   local elem1 = arc.arc:matrix():elements()
+   local elem2 = arcObjMatrix:elements()
+
+   local mat = ipe.Matrix(elem1[1],elem1[2],elem1[3],elem1[4],elem1[5]+elem2[5],elem1[6]+elem2[6])
+
    local circ = ipe.Arc(mat)
-   local m = mat:translation()
+   local m = mat:translation() + arcObjMatrix:translation()
    local d = (s1-m):normalized()
    local l = ipe.Line(m,d)
-   
+  
    p1, p2 = orderIntersectionPoints(circ:intersect(l),s1)
 
    d1, d2 = dist(s1,p1), dist(s1,p2)
@@ -146,7 +149,7 @@ function create_site(model)
    local s1 = matrixS1 * S1:position()
    local sigmaS1 = getWeight(S1)
 
-   s2, sigmaS2 = reverseBisector(s1, sigmaS1, arc)
+   s2, sigmaS2 = reverseBisector(s1, sigmaS1, arc, matrixarc)
 
    drawMarkOfSize(model,s2,sigmaS2,S1:clone())
 
