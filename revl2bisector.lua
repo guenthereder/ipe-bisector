@@ -100,8 +100,6 @@ function reverseBisector(s1, sigS1, arc, arcObjMatrix)
 
    local mat = ipe.Matrix(elem1[1],elem1[2],elem1[3],elem1[4],elem1[5]+elem2[5],elem1[6]+elem2[6])
 
-   print(mat)
-
    local circ = ipe.Arc(mat)
    local m = mat:translation()
    local d = (s1-m):normalized()
