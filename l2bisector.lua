@@ -26,6 +26,14 @@ about = [[
    Create L-2 bisector between two points. Weights given by symbol size.
 ]]
 
+local publicClass={};
+
+function publicClass.helloWorld()
+    print("Hello World");
+end;
+
+return publicClass;
+
 function incorrect(model)
   model:warning("Selection is NOT two points (marks)!")
 end
