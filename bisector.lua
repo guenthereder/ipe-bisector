@@ -415,7 +415,7 @@ function create_all_bisector(model)
 end
 
 methods = {
-  { label="Bisector (two edges or points)", run = create_bisector },
+  { label="Bisector of two segments or points", run = create_bisector },
   { label="All Bisectors of polyline", run = create_all_bisector },
 }
 

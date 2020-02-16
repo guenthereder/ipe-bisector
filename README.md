@@ -1,13 +1,15 @@
 # ipe-bisector
 
 An ipelet programmed in lua that lets you create a (weighted) bisector between two line
-segments, or between two points (marks).
+segments or points.
 
 ## Install
 
 - Download the `.lua`-file and place it in your `$HOME/.ipe/ipelets` directory.
 
 - Open `ipe`, look in `ipelets` -> `Bisector`
+
+- `Shift` + `D` is the shortcut, can be changed at the bottom of the `.lua`-file.
 
 ## Properties
 
