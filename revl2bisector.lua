@@ -49,7 +49,15 @@ function getWeight(S)
 end
 
 function getArcFromArcObj(arcObj)
-   return arcObj:shape()[1][1]
+   shape = arcObj:shape()
+   for ind,subpath in ipairs(shape) do
+      print("--" .. subpath.type)
+      if subpath.type == "curve" then
+         return shape[1][1].arc:matrix()
+      else
+         return subpath[1]
+      end
+   end
 end
 
 function collect_elements(model)
@@ -69,15 +77,8 @@ function collect_elements(model)
    
    local A, B = items[0], items[1]
 
-   if A:type() == "reference" and B:type() == "path" then
-      return A, getArcFromArcObj(B), A:matrix(), B:matrix()
-   end
-   
-   if B:type() == "reference" and A:type() == "path" then
-      return B, getArcFromArcObj(A), B:matrix(), A:matrix()
-   end
+   return A, B
 
-   incorrect(model) return 
 end
 
 function dist(a,b)
@@ -94,12 +95,11 @@ function orderIntersectionPoints(vect,s1)
    end
 end
 
-function reverseBisector(s1, sigS1, arc, arcObjMatrix)
-   local elem1 = arc.arc:matrix():elements()
+function reverseBisector(s1, sigS1, arcmat, arcObjMatrix)
+   local elem1 = arcmat:elements()
    local elem2 = arcObjMatrix:elements()
 
    local mat = ipe.Matrix(elem1[1],elem1[2],elem1[3],elem1[4],elem1[5]+elem2[5],elem1[6]+elem2[6])
-
    local circ = ipe.Arc(mat)
    local m = mat:translation()
    local d = (s1-m):normalized()
@@ -119,7 +119,6 @@ function reverseBisector(s1, sigS1, arc, arcObjMatrix)
       sigS2xd =  (1/(t2-t1)) * (p1-p2)
       s2 = p1 + sigS2xd * t1
       sigS2 = sigS2xd:len()
-
       return s2, sigS2
    else
       -- s1 outside of circle
@@ -137,23 +136,58 @@ function drawMarkOfSize(model,s,size,mark)
    local ref = ipe.Reference(model.attributes, "mark/disk(sx)", s)
    ref:set('symbolsize',size)
    if ref then
-        model:creation("create mark", ref)
+      print("--create mark")
+      model:creation("create mark", ref)
+   end
+end
+
+function isSettingTwoArcs(A,B)
+   if A:type() == "path" and B:type() == "path"  then
+      return true
+   end
+   return false
+end
+
+function isSettingSiteArc(A,B)
+   if A:type() == "reference" and B:type() == "path"  then
+      return true
+   end
+   if B:type() == "reference" and A:type() == "path"  then
+      return true
+   end
+   return false
+end
+
+function getSiteArc(A,B)
+   if A:type() == "reference" and B:type() == "path"  then
+      return A, getArcFromArcObj(B), A:matrix(), B:matrix()
+   end
+   if B:type() == "reference" and A:type() == "path"  then
+      return B, getArcFromArcObj(A), B:matrix(), A:matrix()
    end
 end
 
 function create_site(model)
-   S1, arc, matrixS1, matrixarc = collect_elements(model)
+   A, B = collect_elements(model)
 
-   if not S1 or not arc then return end
+   if isSettingSiteArc(A,B) then
+      S1, arc, matrixS1, matrixarc = getSiteArc(A,B)
 
-   local s1 = matrixS1 * S1:position()
-   local sigmaS1 = getWeight(S1)
+      if not S1 or not arc then return end
 
-   s2, sigmaS2 = reverseBisector(s1, sigmaS1, arc, matrixarc)
+      local s1 = matrixS1 * S1:position()
+      local sigmaS1 = getWeight(S1)
 
-   drawMarkOfSize(model,s2,sigmaS2,S1:clone())
+      s2, sigmaS2 = reverseBisector(s1, sigmaS1, arc, matrixarc)
 
-   return
+      drawMarkOfSize(model,s2,sigmaS2,S1:clone())
+   elseif isSettingTwoArcs(A,B) then
+      Circ, Bis, CircMat, BisMat = getArcFromArcObj(A), getArcFromArcObj(B), A:matrix(), B:matrix()
+      if not Circ or not Bis then return end
+      print("--TODO, circle via cirle")
+   else
+      incorrect(model) return 
+   end
 end
 
 
