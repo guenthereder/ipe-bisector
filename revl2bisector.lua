@@ -184,7 +184,7 @@ function create_site(model)
    elseif isSettingTwoArcs(A,B) then
       Circ, Bis, CircMat, BisMat = getArcFromArcObj(A), getArcFromArcObj(B), A:matrix(), B:matrix()
       if not Circ or not Bis then return end
-      print("--TODO, circle via cirle")
+      print("--TODO, circle via circle")
    else
       incorrect(model) return 
    end
